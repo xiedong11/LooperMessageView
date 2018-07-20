@@ -7,6 +7,7 @@ import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.TranslateAnimation;
@@ -17,12 +18,12 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * desc :
+ * desc :自定义view实现上下轮播的view（仿京东、支付宝消息轮播效果）
  * author：xiedong
  * data：2018/7/20
  */
 public class LooperMessageView extends FrameLayout {
-    private List<String> tipList;
+    private List<MessageEntity> tipList;
     private int curTipIndex = 0;
     private long lastTimeMillis;
     private static final int ANIM_DELAYED_MILLIONS = 3 * 1000;
@@ -32,20 +33,16 @@ public class LooperMessageView extends FrameLayout {
     private static final int ANIM_DURATION = 1 * 1000;
     private static final String DEFAULT_TEXT_COLOR = "#2F4F4F";
     private static final int DEFAULT_TEXT_SIZE = 16;
-    private Drawable head_boy, head_girl;
     private TextView tv_tip_out, tv_tip_in;
     private Animation anim_out, anim_in;
+    private OnItemClickListener onItemClickListener;
 
     public LooperMessageView(Context context) {
-        super(context);
-        initTipFrame();
-        initAnimation();
+        this(context, null);
     }
 
     public LooperMessageView(Context context, AttributeSet attrs) {
-        super(context, attrs);
-        initTipFrame();
-        initAnimation();
+        this(context, attrs, 0);
     }
 
     public LooperMessageView(Context context, AttributeSet attrs, int defStyleAttr) {
@@ -55,8 +52,6 @@ public class LooperMessageView extends FrameLayout {
     }
 
     private void initTipFrame() {
-        head_boy = loadDrawable(R.mipmap.ic_launcher);
-        head_girl = loadDrawable(R.mipmap.ic_launcher);
         tv_tip_out = newTextView();
         tv_tip_in = newTextView();
         addView(tv_tip_in);
@@ -85,7 +80,7 @@ public class LooperMessageView extends FrameLayout {
      */
     private Drawable loadDrawable(int ResId) {
         Drawable drawable = getResources().getDrawable(ResId);
-        drawable.setBounds(0, 0, drawable.getMinimumWidth() - 10, drawable.getMinimumHeight() - 10);
+        drawable.setBounds(0, 0, drawable.getMinimumWidth() / 4, drawable.getMinimumHeight() / 4);
         return drawable;
     }
 
@@ -143,14 +138,16 @@ public class LooperMessageView extends FrameLayout {
     }
 
     private void updateTip(TextView tipView) {
-        if (new Random().nextBoolean()) {
-            tipView.setCompoundDrawables(head_boy, null, null, null);
-        } else {
-            tipView.setCompoundDrawables(head_girl, null, null, null);
-        }
-        String tip = getNextTip();
-        if (!TextUtils.isEmpty(tip)) {
-            tipView.setText(tip);
+        final MessageEntity tip = getNextTip();
+        tipView.setCompoundDrawables(loadDrawable(tip.getImgRes()), null, loadDrawable(R.drawable.ic_more), null);
+        if (!TextUtils.isEmpty(tip.getMessage())) {
+            tipView.setText(tip.getMessage());
+            tipView.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    onItemClickListener.onClick(tip.getMessage());
+                }
+            });
         }
     }
 
@@ -159,7 +156,7 @@ public class LooperMessageView extends FrameLayout {
      *
      * @return
      */
-    private String getNextTip() {
+    private MessageEntity getNextTip() {
         if (isListEmpty(tipList)) return null;
         return tipList.get(curTipIndex++ % tipList.size());
     }
@@ -168,10 +165,18 @@ public class LooperMessageView extends FrameLayout {
         return list == null || list.isEmpty();
     }
 
-    public void setTipList(List<String> tipList) {
+    public void setTipList(List<MessageEntity> tipList) {
         this.tipList = tipList;
         curTipIndex = 0;
         updateTip(tv_tip_out);
         updateTipAndPlayAnimation();
+    }
+
+    public void setOnItemClickListener(OnItemClickListener onItemClickListener) {
+        this.onItemClickListener = onItemClickListener;
+    }
+
+    interface OnItemClickListener {
+        void onClick(String message);
     }
 }
